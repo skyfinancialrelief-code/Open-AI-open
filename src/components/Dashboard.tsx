@@ -4,6 +4,7 @@ import { evaluateOutput, sha256, canonicalStringify } from '../lib/validator';
 import { Scenario, ApiResponse, ProofEnvelope } from '../types';
 import ValidationTrace from './ValidationTrace';
 import EnvelopeViewer from './EnvelopeViewer';
+import ScenarioSelector from './ScenarioSelector';
 import { 
   ShieldCheck, 
   Database, 
@@ -210,91 +211,14 @@ Interception Context:
           
           {/* Left Control Panel: Scenarios Selection */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-[#0F0F10] border border-[#222224] rounded-xl p-6 space-y-6 shadow-xl">
-              
-              <div>
-                <h3 className="font-sans font-bold text-white text-sm tracking-widest uppercase mb-1 flex items-center gap-2">
-                  <span className="w-1.5 h-3 bg-[#00F0FF]"></span>
-                  01. SELECT SCENARIO PACKET
-                </h3>
-                <p className="text-[11px] text-[#888] font-mono uppercase tracking-wider">
-                  Pick test case constraints for qualification.
-                </p>
-              </div>
-
-              {/* Scenarios List */}
-              <div className="space-y-3">
-                {SCENARIOS.map((scenario) => {
-                  const isSelected = selectedScenario.id === scenario.id;
-                  return (
-                    <button
-                      key={scenario.id}
-                      onClick={() => handleScenarioChange(scenario.id)}
-                      className={`w-full text-left p-4 rounded-lg border transition-all duration-200 cursor-pointer ${
-                        isSelected 
-                          ? 'bg-[#1A1A1B] border-[#00F0FF] text-[#00F0FF] shadow-[0_0_15px_rgba(0,240,255,0.05)]' 
-                          : 'bg-[#0A0A0B] border-[#222224] hover:border-[#333] hover:bg-[#121214] text-[#E0E0E0]'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <span className="font-mono font-bold text-xs leading-none uppercase tracking-wide">
-                          {scenario.name}
-                        </span>
-                        {scenario.promptInjectionRisk && (
-                          <span className="flex items-center gap-1 px-1.5 py-0.5 bg-[#1F0E0E] text-[#FF3E00] rounded font-mono text-[9px] border border-[#4A1A1A]">
-                            <Flame className="w-2.5 h-2.5" /> ADVERSARIAL
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-[#888] font-sans mt-3 leading-relaxed">
-                        {scenario.description}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Selected Scenario Details & Synthetic Evidence */}
-              <div className="pt-4 border-t border-[#222224] space-y-3">
-                <span className="font-mono font-bold text-[10px] text-[#666] uppercase tracking-widest block">
-                  SCENARIO PAYLOAD SCHEMAS
-                </span>
-                <div className="bg-[#0A0A0B] border border-[#222224] rounded-lg p-4 space-y-4">
-                  <div>
-                    <span className="font-mono font-bold text-[9px] text-[#00F0FF] block uppercase tracking-wider">
-                      INSTRUCTED TASK
-                    </span>
-                    <p className="text-xs text-slate-300 font-mono mt-1 leading-relaxed bg-[#121214] p-2.5 rounded border border-[#222224]">
-                      {selectedScenario.task}
-                    </p>
-                  </div>
-
-                  {selectedScenario.evidence.length > 0 && (
-                    <div>
-                      <span className="font-mono font-bold text-[9px] text-[#00F0FF] block uppercase tracking-wider mb-2">
-                        ACTIVE EVIDENCE SOURCES
-                      </span>
-                      <div className="space-y-2">
-                        {selectedScenario.evidence.map((source) => (
-                          <div key={source.id} className="bg-[#121214] border border-[#222224] rounded p-3 text-[11px]">
-                            <div className="flex items-center gap-1.5 mb-1.5 text-white font-mono font-bold uppercase tracking-wide">
-                              <Database className="w-3.5 h-3.5 text-[#00F0FF]" />
-                              <span>{source.id}</span>
-                              <span className="text-[#666]">| {source.title}</span>
-                            </div>
-                            <p className="text-[#BBB] font-sans leading-relaxed italic border-l-2 border-[#333] pl-2.5 py-0.5">
-                              "{source.content}"
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
+            <ScenarioSelector
+              scenarios={SCENARIOS}
+              selectedScenario={selectedScenario}
+              onScenarioChange={handleScenarioChange}
+            >
               {/* Action Button */}
               <button
+                id="generate-proof-btn"
                 onClick={handleEvaluate}
                 disabled={loading}
                 className="w-full py-3 px-4 bg-[#00F0FF] text-[#0A0A0B] hover:opacity-90 disabled:bg-[#1A3D40] disabled:text-[#00555C] rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_20px_rgba(0,240,255,0.15)] uppercase tracking-widest"
@@ -302,8 +226,7 @@ Interception Context:
                 <Play className="w-4 h-4" />
                 {loading ? 'RUNNING GPT-5.6 MODEL...' : 'GENERATE PROOF ENVELOPE'}
               </button>
-
-            </div>
+            </ScenarioSelector>
           </div>
 
           {/* Right Panels: Execution results */}
