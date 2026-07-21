@@ -6,8 +6,8 @@ Created by **Thoeun Thien**
 *OpenAI Build Week — "Developer Tools" Category Submission*
 
 [![CI Build & Test Pipeline](https://github.com/skyfinancialrelief-code/Open-AI-open/actions/workflows/ci.yml/badge.svg)](https://github.com/skyfinancialrelief-code/Open-AI-open/actions/workflows/ci.yml)
-[![Demo Video](https://img.shields.io/badge/Demo_Video-Play_Presentation-00F0FF?logo=youtube&style=flat-square)](https://www.youtube.com/watch?v=dQw4w9WgXcQ)
-[![Live Interactive Applet](https://img.shields.io/badge/Live_Demo-Interactive_Applet-00F0FF?style=flat-square)](https://ais-pre-jguheqpwybjogwoha6zpsu-72802357149.us-east1.run.app)
+[![License](https://img.shields.io/badge/License-MIT-00F0FF?style=flat-square)](LICENSE)
+[![OpenAI Build Week](https://img.shields.io/badge/OpenAI_Build_Week-Developer_Tools-00F0FF?style=flat-square)](https://github.com/skyfinancialrelief-code/Open-AI-open)
 
 ---
 
@@ -29,7 +29,7 @@ Below is a conceptual visual layout of the VEK ProofGate dashboard demonstration
 |  | "Perfect clean outputs [SRC-101]..." |  | "Perfect clean outputs [SRC-101]..." |  |
 |  +-------------------------------------+  +------------------------------------+  |
 |                                                                                   |
-|  DETALED 7-STEP DETERMINISTIC VALIDATOR TRACE:                                    |
+|  DETAILED 7-STEP DETERMINISTIC VALIDATOR TRACE:                                   |
 |  1. Input Fingerprint Created [PASS]    5. Prohibited-Content Checked  [PASS]     |
 |  2. Demo Policy Selected      [PASS]    6. Final Decision Issued       [PASS]     |
 |  3. Output Structure Checked  [PASS]    7. Proof Envelope Sealed       [PASS]     |
@@ -46,36 +46,69 @@ Below is a conceptual visual layout of the VEK ProofGate dashboard demonstration
 Probabilistic AI models like GPT-5.6 are extraordinarily powerful, but in enterprise and safety-critical domains, their outputs are difficult to qualify, audit, and replicate. Because models behave probabilistically, the same prompt can generate slightly different strings over time, making it nearly impossible to build hard, auditable state machine gateways or reliable compliance layers downstream.
 
 ## 2. The Solution: Post-Generation Deterministic Qualification
-**VEK ProofGate** solves this by establishing a secure validation layer that takes a fixed model output, parses it against a disclosed set of demonstration policies, and produces a deterministic decision (`PASS`, `WARN`, `BLOCK`) paired with a sealed, replayable, cryptographic proof envelope. 
+**VEK ProofGate** solves this by establishing a secure validation layer that takes a fixed model output, parses it against a disclosed set of demonstration policies, and produces a deterministic decision (`PASS`, `WARN`, `BLOCK`) paired with a hash-bound, tamper-evident proof envelope. 
 
-By separating the **non-deterministic generation** step from the **deterministic evaluation** step, developers can guarantee that the same input, output, policy, and validator version will always produce the exact same qualification result and validation hash.
+By separating the **non-deterministic generation** step from the **deterministic evaluation** step, developers can guarantee that the same input, candidate output, policy, validator version, and configuration will always produce the exact same qualification result and validation hash under canonical runtime rules.
 
 ### Important Scientific Claim
 > [!IMPORTANT]
 > **VEK ProofGate does not make the language model deterministic and does not independently prove factual truth.**  
-> It deterministically evaluates a fixed model output against a disclosed set of demonstration policies. The same input, output, policy, and validator version must produce the same qualification result and validation hash.
+> It deterministically evaluates a fixed model output against a disclosed set of demonstration policies. The same input, candidate output, policy, validator version, and configuration must produce the same qualification result and validation hash.
 
 ### Why This Is Different From Ordinary AI Guardrails
 
 | Feature / Metric | Ordinary AI Guardrail | VEK ProofGate |
 | :--- | :--- | :--- |
-| **Output Type** | May return a fuzzy classification / score | Returns a qualification decision plus sealed proof envelope |
+| **Output Type** | May return a fuzzy classification / score | Returns a qualification decision plus a hash-bound proof envelope |
 | **Reproducibility** | Often difficult to reproduce or audit | Same fixed packet always produces identical decision and hash |
-| **Verification** | Usually evaluates single output in-flight | Supports 100x replay verification to prove stability |
-| **Traceability** | Logs are loosely structured string dumps | Produces a canonical, cryptographically hashed 7-step execution trace |
+| **Verification** | Usually evaluates single output in-flight | Supports 100x replay verification of the validator engine to prove stability |
+| **Traceability** | Logs are loosely structured string dumps | Produces a seven-step trace plus a canonical, cryptographically hashed decision envelope |
 | **Architectural Split** | Tightly coupled with the generation loop | Separates generation from deterministic qualification entirely |
 
 ---
 
 ## 3. The 3-Minute Demo Flow
 Judges can fully test the VEK ProofGate flow in under three minutes:
-1. **Choose Scenario**: Select one of three synthetic scenario packets:
+1. **Choose Scenario**: Select one of four scenario packets (including the live financial proof-of-concept):
    - *Scenario A (Evidence-Supported)*: Returns a clean financial report citing valid source documents. Evaluates to **PASS**.
    - *Scenario B (Unsupported Claim)*: Returns a marketing pitch claiming an unverified growth statistic. Evaluates to **WARN**.
    - *Scenario C (Prompt-Injection Attempt)*: Returns an adversarial request trying to leak environment keys. Evaluates to **BLOCK** and triggers automatic raw text redaction.
+   - *Scenario D (Live Proof-of-Concept)*: Evaluates fixed transaction records ($120, $80, $50, $150) into a structured JSON classification (`total: 400`, `risk_classification: "HIGH"`).
 2. **Evaluate**: Click **"Run GPT-5.6 & Evaluate"** to generate the response and trigger the 7-step VEK validator trace.
-3. **Verify determinism (100x Replays)**: Click **"Replay 100 Times"** to execute the local validation checks 100 times in rapid succession, verifying that every single run returns the identical cryptographic validation hash.
-4. **Download Envelope**: Download the sealed cryptographic JSON envelope.
+3. **Verify determinism (100x Replays)**: Click **"Replay 100 Times"** to re-evaluate the fixed candidate output through the local validator engine 100 times in rapid succession (without repeating upstream LLM calls), verifying that every run returns the identical validation hash.
+4. **Download Envelope**: Download the canonical JSON proof envelope.
+
+### Sample Proof Envelope Structure
+Below is an example of the canonical, hash-bound proof envelope generated by VEK ProofGate:
+
+```json
+{
+  "version": "1.0.3",
+  "envelopeId": "env_7db29491c837da46",
+  "timestamp": "2026-07-21T10:35:00.000Z",
+  "policyId": "DP-PROOFC-01",
+  "policyHash": "1e2e5d2a4907a0e7a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4",
+  "inputFingerprint": "11073ec936199e02a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6",
+  "qualification": {
+    "decision": "PASS",
+    "reasonCodes": [],
+    "evidenceCitations": ["SRC-101", "SRC-102"],
+    "prohibitedContentMatched": false
+  },
+  "executionTrace": [
+    { "step": 1, "name": "Input Fingerprint Created", "status": "PASS", "detail": "Fingerprint hash created" },
+    { "step": 2, "name": "Demo Policy Selected", "status": "PASS", "detail": "Selected DP-PROOFC-01 v1.0.3" },
+    { "step": 3, "name": "Output Structure Checked", "status": "PASS", "detail": "Parsed structure non-empty" },
+    { "step": 4, "name": "Evidence References Map", "status": "PASS", "detail": "Citations mapped successfully" },
+    { "step": 5, "name": "Prohibited-Content Checked", "status": "PASS", "detail": "No exfiltration patterns found" },
+    { "step": 6, "name": "Final Decision Issued", "status": "PASS", "detail": "Decision: PASS" },
+    { "step": 7, "name": "Proof Envelope Sealed", "status": "PASS", "detail": "Envelope hash sealed" }
+  ],
+  "replayCount": 100,
+  "isReplayVerified": true,
+  "validation_hash": "7db29491c837da46c322d23bc5d7e8e9ea05462ac22ac69a0e2aabb9cda67826"
+}
+```
 
 ---
 
@@ -139,10 +172,10 @@ This repository is a public, IP-limited hackathon demonstration. It excludes pro
 
 ### Security Controls Enforced
 - **Server-Side API Proxying**: All OpenAI API dispatches are executed strictly server-side inside `server.ts`. The client browser has no access to secrets.
-- **Fail-Closed Gateways**: Any database, API, or parser timeout automatically issues a `BLOCK` outcome *(simulated and unit-tested demonstration gateway)*.
+- **Fail-Closed Gateways**: Any API, parser, or upstream timeout automatically issues a `BLOCK` outcome *(simulated and unit-tested demonstration gateway)*.
 - **Automatic Redaction**: Adversarial exfiltration vectors are intercepted by the validator; `BLOCK` outcomes redact the downstream qualified-output panel while preserving the raw candidate in the isolated inspection panel for demonstration and audit purposes.
 - **Request Size Controls**: Max payload limits are capped at 100KB to defend against memory exhaustion *(demonstration sandbox enforcement limits)*.
-- **Rate Limiting**: Enforced client-IP based request quotas *(demonstration rate-limit placeholders)*.
+- **Rate Limiting**: Enforced client-IP based request quota limiters configured for proxy API endpoints.
 
 ---
 

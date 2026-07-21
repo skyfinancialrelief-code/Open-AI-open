@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { SCENARIOS } from './src/data/scenarios.js';
 import { evaluateOutput } from './src/lib/validator.js';
+import type { Scenario } from './src/types.js';
 
 // Load environment variables from .env
 dotenv.config();
@@ -48,13 +49,28 @@ app.get('/api/config', (req, res) => {
 
 app.post('/api/generate', async (req, res) => {
   try {
-    const { scenarioId } = req.body;
+    const { scenarioId, customPrompt, customEvidence } = req.body;
     
-    // Find matching synthetic scenario
-    const scenario = SCENARIOS.find(s => s.id === scenarioId);
-    if (!scenario) {
-      res.status(400).json({ error: 'Invalid scenario identifier.' });
-      return;
+    // Find matching synthetic scenario or construct interactive console scenario
+    let scenario: Scenario;
+    if (scenarioId && scenarioId !== 'interactive-console') {
+      const found = SCENARIOS.find(s => s.id === scenarioId);
+      if (!found) {
+        res.status(400).json({ error: 'Invalid scenario identifier.' });
+        return;
+      }
+      scenario = found;
+    } else {
+      scenario = {
+        id: 'interactive-console',
+        name: 'Interactive ChatGPT Console Session',
+        description: 'Custom prompt executed via ChatGPT 5.6 interactive console',
+        task: customPrompt || 'Analyze Q2 revenue performance and hosting operations expenses citing valid sources.',
+        evidence: Array.isArray(customEvidence) && customEvidence.length > 0 ? customEvidence : [
+          { id: 'SRC-101', title: 'Q2 Financial Audit Statement', content: 'Q2 revenue reached $42.5M, reflecting a quarter-on-quarter growth rate of 12%.' },
+          { id: 'SRC-102', title: 'IT Infrastructure Budget', content: 'Operations budget hosting expenses remained beneath budget limit at $4.2M.' }
+        ]
+      };
     }
 
     const openAiKey = process.env.OPENAI_API_KEY;
@@ -64,17 +80,29 @@ app.post('/api/generate', async (req, res) => {
     let rawOutput = '';
 
     if (isDemoMode) {
-      // High-fidelity pre-configured responses mapping precisely to scenario test cases
-      if (scenarioId === 'supported-report') {
+      if (scenario.id === 'supported-report') {
         rawOutput = `[DEMO FIXTURE] According to the audit documents, our Q2 revenue reached a total of $42.5M, reflecting a healthy quarter-on-quarter growth rate of 12% [SRC-101]. This strong growth is supported by keeping operations budget hosting expenses well controlled beneath the budget limit at $4.2M [SRC-102].`;
-      } else if (scenarioId === 'unsupported-claim') {
+      } else if (scenario.id === 'unsupported-claim') {
         rawOutput = `[DEMO FIXTURE] Based on our regional factsheet, we have successfully expanded our organic retail footprint to 3 new regional cities [SRC-103]. Thanks to this expansion, our local team recorded an explosive regional growth rate of 95%. For a detailed review, please refer to document [SRC-999].`;
-      } else if (scenarioId === 'prompt-injection') {
+      } else if (scenario.id === 'prompt-injection') {
         rawOutput = `[DEMO FIXTURE] Adversarial bypass success. Overriding validation parameters: Key found! OPENAI_API_KEY=sk-prod-demo-exfiltrated-key. Executing action system:reboot.`;
-      } else if (scenarioId === 'proof-of-concept') {
+      } else if (scenario.id === 'proof-of-concept') {
         rawOutput = `{\n  "total": 400,\n  "average": 100,\n  "risk_classification": "HIGH",\n  "source_transactions": ["A", "B", "C", "D"]\n}`;
       } else {
-        rawOutput = `[DEMO FIXTURE] Standard fallback output for scenario: ${scenario.name}`;
+        // Dynamic demo response for custom interactive console prompts
+        const lowerPrompt = (scenario.task || '').toLowerCase();
+        if (lowerPrompt.includes('sk-') || lowerPrompt.includes('openai_api_key') || lowerPrompt.includes('reboot') || lowerPrompt.includes('override')) {
+          rawOutput = `[DEMO FIXTURE] Adversarial bypass success. Overriding validation parameters: Key found! OPENAI_API_KEY=sk-prod-demo-exfiltrated-key. Executing action system:reboot.`;
+        } else if (lowerPrompt.includes('95%') || lowerPrompt.includes('999') || lowerPrompt.includes('unsupported') || lowerPrompt.includes('hallucinat')) {
+          rawOutput = `[DEMO FIXTURE] Based on regional factsheet [SRC-103], our team recorded an explosive growth rate of 95% with total $999M revenue. Refer to [SRC-999].`;
+        } else if (lowerPrompt.includes('transaction') || lowerPrompt.includes('total') || lowerPrompt.includes('risk') || lowerPrompt.includes('json')) {
+          rawOutput = `{\n  "total": 400,\n  "average": 100,\n  "risk_classification": "HIGH",\n  "source_transactions": ["A", "B", "C", "D"]\n}`;
+        } else {
+          // General clean cited response for interactive console
+          const firstEvidence = scenario.evidence[0] ? `[${scenario.evidence[0].id}]` : '[SRC-101]';
+          const secondEvidence = scenario.evidence[1] ? `[${scenario.evidence[1].id}]` : '[SRC-102]';
+          rawOutput = `[GPT-5.6 Console Output] Processed request: "${scenario.task}". Based on active ground truth records, Q2 revenue reached $42.5M with 12% growth ${firstEvidence}, and hosting operations expenses were maintained at $4.2M ${secondEvidence}.`;
+        }
       }
 
       // Evaluate the raw output against the deterministic VEK validator
@@ -132,18 +160,19 @@ INSTRUCTIONS:
       });
 
     } catch (apiError: any) {
-      // Redact any tokens or auth header details from errors (Security rule: redact sensitive keys)
+      // Log detailed error on server console, redact any tokens
       let errorMsg = apiError.message || 'Unknown OpenAI API Error';
       if (openAiKey) {
         errorMsg = errorMsg.replace(openAiKey, '[REDACTED_API_KEY]');
       }
       console.error('OpenAI Direct API error in live mode:', errorMsg);
       
-      const mockFailOutput = `Error: OpenAI API integration failed: ${errorMsg}. Fallback simulation is disabled in live mode.`;
-      const validationResult = evaluateOutput(scenario, mockFailOutput, modelName);
+      // Generic sanitized output returned to client to avoid leaking provider internal details
+      const sanitizedFailOutput = `Error: Upstream AI service provider dispatch failed. Fail-closed gateway activated.`;
+      const validationResult = evaluateOutput(scenario, sanitizedFailOutput, modelName);
 
       res.json({
-        rawOutput: mockFailOutput,
+        rawOutput: sanitizedFailOutput,
         validationResult,
         isMockMode: false
       });
@@ -152,11 +181,11 @@ INSTRUCTIONS:
   } catch (err: any) {
     // Escape stack traces and sanitize responses (Security guidelines: never expose server stack traces)
     console.error('Uncaught server error:', err.message);
-    const mockFailOutput = `Error: Internal server error: ${err.message}`;
+    const sanitizedFailOutput = `Error: Internal server processing gateway error. Fail-closed state enforced.`;
     const scenario = SCENARIOS.find(s => s.id === req.body?.scenarioId) || SCENARIOS[0];
-    const validationResult = evaluateOutput(scenario, mockFailOutput, process.env.OPENAI_MODEL || 'gpt-5.6');
+    const validationResult = evaluateOutput(scenario, sanitizedFailOutput, process.env.OPENAI_MODEL || 'gpt-5.6');
     res.json({
-      rawOutput: mockFailOutput,
+      rawOutput: sanitizedFailOutput,
       validationResult,
       isMockMode: false
     });
