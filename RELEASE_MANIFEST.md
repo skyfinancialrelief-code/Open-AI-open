@@ -1,6 +1,6 @@
 # Release Manifest
 
-**Repository name: vek-proofgate-hackathon**
+**Repository name: Open-AI-open**
 **Visibility: PRIVATE**
 
 The following files are verified, scanned, and authorized for inclusion in this demonstration release:

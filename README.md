@@ -43,7 +43,7 @@ Judges can fully test the VEK ProofGate flow in under three minutes:
 ---
 
 ## 5. Security & IP Firewall
-This repository is a completely new isolated container named `Open-AI-open` and is defaulted to **PRIVATE**.
+This repository is a new, isolated private repository named Open-AI-open.
 
 ### Intellectual Property Firewall Notice
 > [!WARNING]
@@ -52,7 +52,7 @@ This repository is a completely new isolated container named `Open-AI-open` and 
 ### Security Controls Enforced
 - **Server-Side API Proxying**: All OpenAI API dispatches are executed strictly server-side inside `server.ts`. The client browser has no access to the secrets.
 - **Fail-Closed Gateways**: Any database, API, or parser timeout automatically issues a `BLOCK` outcome.
-- **Automatic Redaction**: Adversarial exfiltration vectors are intercepted by the validator, which completely redacts raw output on `BLOCK` outcomes.
+- **Automatic Redaction**: Adversarial exfiltration vectors are intercepted by the validator; `BLOCK` outcomes redact the downstream qualified-output panel while preserving the raw candidate in the isolated inspection panel for demonstration and audit purposes.
 - **Request Size Controls**: Max payload limits are capped at 100KB to defend against memory exhaustion.
 - **Rate Limiting**: Enforced client-IP based request quotas.
 
@@ -63,13 +63,26 @@ This repository is a completely new isolated container named `Open-AI-open` and 
 To run the project locally, execute the following commands:
 
 ### Prerequisites
-Make sure Node.js (v18+) is installed. Create a local `.env` file containing your API credentials (or enable simulated sandbox fixtures with `DEMO_MODE=true`):
-```env
-# Enable high-fidelity demonstration simulation fixtures
-DEMO_MODE="true"
+Make sure Node.js (v18+) is installed.
 
-# Live mode parameters (must be set if DEMO_MODE="false")
-OPENAI_API_KEY="<set-in-secret-manager>"
+### Environment configuration
+
+Configure these values through your hosting platform’s secure environment-variable or secrets panel. Never commit an API key to GitHub.
+
+```env
+# Use false for the live GPT-5.6 hackathon demonstration
+DEMO_MODE="false"
+
+# Set OPENAI_API_KEY securely outside the repository
+OPENAI_API_KEY="<configured-in-secret-manager>"
+
+OPENAI_MODEL="gpt-5.6"
+```
+
+For local fixture testing without an API request:
+
+```env
+DEMO_MODE="true"
 OPENAI_MODEL="gpt-5.6"
 ```
 
