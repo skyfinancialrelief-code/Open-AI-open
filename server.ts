@@ -80,7 +80,7 @@ app.post('/api/generate', async (req, res) => {
     }
 
     // Live mode (must never silently fall back to simulation)
-    if (!openAiKey || openAiKey === 'your_openai_api_key_here') {
+    if (!openAiKey || openAiKey === 'your_openai_api_key_here' || openAiKey === '<set-in-secret-manager>') {
       res.status(400).json({
         error: 'OpenAI API key is missing or not configured. To run the simulated high-fidelity demonstration, please set DEMO_MODE=true in your environment.'
       });

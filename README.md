@@ -43,7 +43,7 @@ Judges can fully test the VEK ProofGate flow in under three minutes:
 ---
 
 ## 5. Security & IP Firewall
-This repository is a completely new isolated container named `vek-proofgate-hackathon` and is defaulted to **PRIVATE**.
+This repository is a completely new isolated container named `Open-AI-open` and is defaulted to **PRIVATE**.
 
 ### Intellectual Property Firewall Notice
 > [!WARNING]
@@ -69,7 +69,7 @@ Make sure Node.js (v18+) is installed. Create a local `.env` file containing you
 DEMO_MODE="true"
 
 # Live mode parameters (must be set if DEMO_MODE="false")
-OPENAI_API_KEY="sk-your-openai-api-key"
+OPENAI_API_KEY="<set-in-secret-manager>"
 OPENAI_MODEL="gpt-5.6"
 ```
 
