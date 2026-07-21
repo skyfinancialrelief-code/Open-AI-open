@@ -39,8 +39,8 @@ interface MessageItem {
 }
 
 interface AiConsoleProps {
-  modelName: string;
-  demoMode: boolean;
+  modelName?: string;
+  demoMode?: boolean;
 }
 
 const DEFAULT_EVIDENCE: EvidenceSource[] = [
@@ -71,7 +71,8 @@ const PRESET_PROMPTS = [
   }
 ];
 
-export default function AiConsole({ modelName, demoMode }: AiConsoleProps) {
+export default function AiConsole({ modelName = 'gpt-5.6', demoMode }: AiConsoleProps) {
+  const safeModelName = (modelName || 'gpt-5.6').toUpperCase();
   const [prompt, setPrompt] = useState<string>('');
   const [evidenceList, setEvidenceList] = useState<EvidenceSource[]>(DEFAULT_EVIDENCE);
   const [newSrcId, setNewSrcId] = useState<string>('');
@@ -83,7 +84,7 @@ export default function AiConsole({ modelName, demoMode }: AiConsoleProps) {
     {
       id: 'welcome-msg',
       role: 'assistant',
-      content: `Welcome to the ChatGPT ${modelName.toUpperCase()} Execution Console. Every prompt dispatched through this console is processed through the non-deterministic OpenAI endpoint (or high-fidelity fixture simulator) and deterministically evaluated by the VEK ProofGate validator before output release.`,
+      content: `Welcome to the ChatGPT ${safeModelName} Execution Console. Every prompt dispatched through this console is processed through the non-deterministic OpenAI endpoint (or high-fidelity fixture simulator) and deterministically evaluated by the VEK ProofGate validator before output release.`,
       timestamp: new Date().toLocaleTimeString()
     }
   ]);
@@ -103,7 +104,7 @@ export default function AiConsole({ modelName, demoMode }: AiConsoleProps) {
 
   // Audio Response (Speech Synthesis) State
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
-  const [autoReadAudio, setAutoReadAudio] = useState<boolean>(false);
+  const [autoReadAudio, setAutoReadAudio] = useState<boolean>(true);
 
   const toggleListening = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -175,13 +176,40 @@ export default function AiConsole({ modelName, demoMode }: AiConsoleProps) {
     }
 
     window.speechSynthesis.cancel();
-    const cleanText = text
+    
+    let sanitized = text
+      .replace(/```json|```/g, '')
       .replace(/\[DEMO FIXTURE\]/g, '')
       .replace(/\[SRC-\d+\]/g, '')
       .replace(/\[GPT-5\.6 Console Output\]/g, '')
       .trim();
 
-    const utterance = new SpeechSynthesisUtterance(cleanText || text);
+    // Try parsing JSON to read key-values naturally
+    let spokenText = sanitized;
+    try {
+      const parsed = JSON.parse(sanitized);
+      if (typeof parsed === 'object' && parsed !== null) {
+        const parts: string[] = [];
+        for (const [k, v] of Object.entries(parsed)) {
+          const keyLabel = k.replace(/_/g, ' ');
+          if (Array.isArray(v)) {
+            parts.push(`${keyLabel}: ${v.join(', ')}`);
+          } else {
+            parts.push(`${keyLabel}: ${v}`);
+          }
+        }
+        spokenText = parts.join('. ');
+      }
+    } catch {
+      // Standard markdown/symbol cleanup
+      spokenText = sanitized
+        .replace(/[*#_~`]/g, '')
+        .replace(/[{}[\]"]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    const utterance = new SpeechSynthesisUtterance(spokenText || text);
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
 
@@ -288,6 +316,10 @@ export default function AiConsole({ modelName, demoMode }: AiConsoleProps) {
       };
 
       setMessages(prev => [...prev, asstMsg]);
+
+      if (autoReadAudio) {
+        setTimeout(() => speakText(assistantMsgId, failText), 100);
+      }
     } finally {
       setLoading(false);
     }
@@ -364,7 +396,7 @@ export default function AiConsole({ modelName, demoMode }: AiConsoleProps) {
           </div>
           <div>
             <h2 className="font-mono font-bold text-white text-sm uppercase tracking-wider flex items-center gap-2">
-              Gust AI Console // ChatGPT {modelName.toUpperCase()}
+              Gust AI Console // ChatGPT {safeModelName}
               <span className="text-[10px] font-mono px-2 py-0.5 bg-[#00F0FF]/10 text-[#00F0FF] rounded border border-[#00F0FF]/30">
                 GUST_DETERMINISTIC_ENGINE
               </span>
@@ -695,7 +727,7 @@ export default function AiConsole({ modelName, demoMode }: AiConsoleProps) {
         {loading && (
           <div className="flex items-center gap-3 p-4 bg-[#0F0F10] border border-[#222224] rounded-xl text-xs font-mono text-[#00F0FF]">
             <div className="w-2 h-2 rounded-full bg-[#00F0FF] animate-ping" />
-            <span>DISPATCHING PROMPT TO CHATGPT {modelName.toUpperCase()} & EXECUTING 7-STEP PROOFGATE VALIDATOR...</span>
+            <span>DISPATCHING PROMPT TO CHATGPT {safeModelName} & EXECUTING 7-STEP PROOFGATE VALIDATOR...</span>
           </div>
         )}
       </div>
@@ -733,7 +765,7 @@ export default function AiConsole({ modelName, demoMode }: AiConsoleProps) {
                   handleSendPrompt();
                 }
               }}
-              placeholder={`Enter or speak prompt for ChatGPT ${modelName.toUpperCase()} (e.g. "Summarize financial numbers and cite sources")...`}
+              placeholder={`Enter or speak prompt for ChatGPT ${safeModelName} (e.g. "Summarize financial numbers and cite sources")...`}
               className="w-full bg-[#0A0A0B] border border-[#333] focus:border-[#00F0FF] rounded-lg p-3 text-xs font-mono text-white outline-none resize-none placeholder-[#555] transition-colors pr-24"
             />
             <div className="absolute right-3 bottom-3 text-[10px] font-mono text-[#555]">

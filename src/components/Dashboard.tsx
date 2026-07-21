@@ -231,7 +231,7 @@ Interception Context:
             <div className="px-3 py-1 bg-[#1A1A1B] border border-[#222224] rounded text-[11px] flex items-center gap-1.5">
               <span className="text-[#666]">MODEL:</span> 
               <span className="text-[#00F0FF] font-bold">
-                {config ? config.modelName.toUpperCase() : 'GPT-5.6-DEV'}
+                {config?.modelName ? config.modelName.toUpperCase() : 'GPT-5.6-DEV'}
               </span>
             </div>
             <div className="px-3 py-1 bg-[#1A1A1B] border border-[#222224] rounded text-[11px] flex items-center gap-1.5">
@@ -247,7 +247,7 @@ Interception Context:
         <div className="max-w-7xl mx-auto flex items-start gap-2">
           <span className="font-bold shrink-0 text-amber-500 uppercase not-italic">[SYSTEM NOTICE]:</span>
           <span>
-            “Gust is a deterministic technology AI console engineered by Thoeun Thien. Powered by the VEK Proof Engine, Gust evaluates model outputs against explicit rules and ground-truth evidence, producing deterministic qualification decisions and cryptographic proof envelopes.”
+            “Gust is a deterministic technology AI console engineered by Thoeun Thien. Powered by the VEK Proof Engine, Gust deterministically evaluates model outputs against explicit rules and evidence without altering model non-determinism. The same input, output, policy, and validator version will consistently produce the identical qualification result and cryptographic validation hash.”
           </span>
         </div>
       </div>
@@ -299,7 +299,7 @@ Interception Context:
             }`}
           >
             <Terminal className="w-4 h-4 text-[#00F0FF]" />
-            02. Interactive ChatGPT {config ? config.modelName.toUpperCase() : '5.6'} Console
+            02. Interactive ChatGPT {config?.modelName ? config.modelName.toUpperCase() : '5.6'} Console
             <span className="text-[9px] px-1.5 py-0.5 bg-[#00FF41]/20 text-[#00FF41] rounded border border-[#00FF41]/40 ml-1 font-mono">
               LIVE_PROMPT
             </span>
@@ -359,7 +359,7 @@ Interception Context:
                   <div className="bg-[#0F0F10] border border-[#222224] rounded-xl overflow-hidden flex flex-col shadow-lg">
                     <div className="bg-[#121214] border-b border-[#222224] px-6 py-3 flex items-center justify-between">
                       <h3 className="font-mono font-bold text-[#888] text-xs uppercase tracking-widest flex items-center gap-2">
-                        Raw {config ? config.modelName.toUpperCase() : 'GPT-5.6'} Output
+                        Raw {config?.modelName ? config.modelName.toUpperCase() : 'GPT-5.6'} Output
                       </h3>
                       <div className="flex items-center gap-3">
                         <button
