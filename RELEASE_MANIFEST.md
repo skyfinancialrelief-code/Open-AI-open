@@ -1,7 +1,7 @@
 # Release Manifest
 
 **Repository name: Open-AI-open**
-**Visibility: PRIVATE**
+**Visibility: PUBLIC (IP-Limited Demonstration)**
 
 The following files are verified, scanned, and authorized for inclusion in this demonstration release:
 

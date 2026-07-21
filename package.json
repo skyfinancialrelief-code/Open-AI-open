@@ -1,8 +1,12 @@
 {
-  "name": "react-example",
+  "name": "vek-proofgate",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Deterministic qualification and replayable proof envelopes for AI-generated outputs",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
