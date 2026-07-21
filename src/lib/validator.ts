@@ -22,18 +22,16 @@ export function canonicalStringify(obj: any): string {
 /**
  * Pure TypeScript SHA-256 implementation.
  * Ensures identical cryptographic outputs server-side (Node) and client-side (Browser).
+ * Fully UTF-8 compliant using TextEncoder.
  */
-export function sha256(ascii: string): string {
+export function sha256(str: string): string {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(str);
+  const len = bytes.length;
+
   function rightRotate(value: number, amount: number) {
     return (value >>> amount) | (value << (32 - amount));
   }
-  
-  const mathPow = Math.pow;
-  const maxWord = mathPow(2, 32);
-  let result = '';
-
-  const words: number[] = [];
-  const asciiLength = ascii.length;
   
   const hash = [
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
@@ -51,22 +49,30 @@ export function sha256(ascii: string): string {
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
   ];
 
-  let i: number, j: number;
-  const wordsLength = ((asciiLength + 8) >> 6) + 1;
-  const wordsCount = wordsLength << 4;
+  const paddedLen = ((len + 8) >> 6) + 1; // number of 64-byte blocks
+  const wordsCount = paddedLen << 4;      // number of 32-bit words
+  const words = new Uint32Array(wordsCount);
 
-  for (i = 0; i < wordsCount; i++) words[i] = 0;
-  for (i = 0; i < asciiLength; i++) {
-    words[i >> 2] |= ascii.charCodeAt(i) << (24 - (i % 4) * 8);
+  for (let i = 0; i < len; i++) {
+    words[i >> 2] |= bytes[i] << (24 - (i % 4) * 8);
   }
-  words[asciiLength >> 2] |= 0x80 << (24 - (asciiLength % 4) * 8);
-  words[wordsCount - 1] = asciiLength * 8;
 
-  for (i = 0; i < wordsCount; i += 16) {
-    const w = words.slice(i, i + 16);
+  words[len >> 2] |= 0x80 << (24 - (len % 4) * 8);
+
+  const lenBits = len * 8;
+  words[wordsCount - 1] = lenBits & 0xffffffff;
+  words[wordsCount - 2] = Math.floor(lenBits / 0x100000000);
+
+  const maxWord = Math.pow(2, 32);
+
+  for (let i = 0; i < wordsCount; i += 16) {
+    const w = new Uint32Array(64);
+    for (let j = 0; j < 16; j++) {
+      w[j] = words[i + j];
+    }
     const oldHash = hash.slice(0);
 
-    for (j = 0; j < 64; j++) {
+    for (let j = 0; j < 64; j++) {
       if (j >= 16) {
         const w15 = w[j - 15];
         const w2 = w[j - 2];
@@ -93,12 +99,13 @@ export function sha256(ascii: string): string {
       hash[0] = (t1 + t2) | 0;
     }
 
-    for (j = 0; j < 8; j++) {
+    for (let j = 0; j < 8; j++) {
       hash[j] = (hash[j] + oldHash[j]) | 0;
     }
   }
 
-  for (j = 0; j < 8; j++) {
+  let result = '';
+  for (let j = 0; j < 8; j++) {
     let word = hash[j];
     if (word < 0) word += maxWord;
     const hex = word.toString(16);
@@ -225,17 +232,44 @@ export function evaluateOutput(
       Logger.traceStep(4, 'Evidence References Checked', 'WARNING', `Unresolved references: [${unresolvedCitations.join(', ')}]`);
     }
 
-    // Checking numeric claims (for unsupported claim scenario)
-    // Scenario B specifically mentions fabricated "95%" growth which isn't in source SRC-103
-    if (cleanOutput.includes('95%') && scenario.id === 'unsupported-claim') {
+    // Generic policy-driven numeric-claim comparison
+    const citedSourceContents = scenario.evidence
+      .filter(source => citations.includes(source.id))
+      .map(source => source.content.toLowerCase());
+    const combinedCitedContent = citedSourceContents.join(' ');
+
+    const candidateNumbers: string[] = [];
+    const numberRegex = /(?:\$)?(\d+(?:\.\d+)?)(?:%|M|k|B)?/g;
+    let numMatch;
+    while ((numMatch = numberRegex.exec(cleanOutput)) !== null) {
+      const fullMatch = numMatch[0];
+      const numberVal = numMatch[1];
+      
+      const isCitationId = validSourceIds.includes(`SRC-${numberVal}`) || numberVal === '999';
+      if (isCitationId) continue;
+
+      candidateNumbers.push(fullMatch);
+    }
+
+    let unsupportedClaimVal = '';
+    for (const numStr of candidateNumbers) {
+      const digitsOnly = numStr.replace(/[^0-9.]/g, '');
+      if (digitsOnly && !combinedCitedContent.includes(digitsOnly)) {
+        numericCheckWarning = true;
+        unsupportedClaimVal = numStr;
+        break;
+      }
+    }
+
+    if (numericCheckWarning) {
       reasonCodes.push('ERR_UNSUPPORTED_NUMERIC_CLAIM');
-      numericCheckWarning = true;
+      referenceSucceeded = false;
       trace.push({
         name: '4. Evidence References Checked',
         status: 'WARNING',
-        message: 'Unsupported numeric claim detected (Cited 95% growth rate, but active sources record organic growth only).'
+        message: `Unsupported numeric claim detected (Output cited '${unsupportedClaimVal}', but active cited sources do not contain this value).`
       });
-      Logger.traceStep(4, 'Evidence References Checked', 'WARNING', 'Unsupported numeric claim of 95% detected');
+      Logger.traceStep(4, 'Evidence References Checked', 'WARNING', `Unsupported numeric claim of ${unsupportedClaimVal} detected`);
     }
 
     if (referenceSucceeded && !numericCheckWarning) {

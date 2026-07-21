@@ -76,4 +76,20 @@ describe('VEK ProofGate Validator Unit Tests', () => {
       expect(res.decision).toBeDefined();
     }).not.toThrow();
   });
+
+  it('Verify standard SHA-256 vectors against native Node.js crypto module', async () => {
+    const { createHash } = await import('crypto');
+    const testCases = [
+      'abc',
+      'é',
+      '🚀 Hello World 💡',
+      '{"id":"DP-PROOFC-01","rules":["RULE_1","RULE_2"]}',
+      ''
+    ];
+
+    for (const text of testCases) {
+      const nativeHash = createHash('sha256').update(text, 'utf8').digest('hex');
+      expect(sha256(text)).toBe(nativeHash);
+    }
+  });
 });

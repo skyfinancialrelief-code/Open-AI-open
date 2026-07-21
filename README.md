@@ -35,9 +35,9 @@ Judges can fully test the VEK ProofGate flow in under three minutes:
 ---
 
 ## 4. Technology & SDK Integrations
-- **Runtime**: Node.js full-stack (Express + Vite + React 18).
-- **AI Models**: Designed to dispatch to GPT-5.6 via the official **OpenAI JavaScript SDK** and Response API.
-- **Development Tooling**: Integrated **Vitest** for deterministic validator unit tests.
+- **Runtime**: Node.js full-stack (Express + Vite + React 19).
+- **AI Models**: Dispatches to GPT-5.6 via the official **OpenAI JavaScript SDK** and the modern **Responses API** (`openai.responses.create` using `response.output_text`).
+- **Development Tooling**: Integrated **Vitest** for deterministic validator unit tests and custom state-free security scanners.
 - **Aesthetic Styling**: Clean, responsive layout designed with **Tailwind CSS** and Lucide React icons.
 
 ---
@@ -63,8 +63,12 @@ This repository is a completely new isolated container named `vek-proofgate-hack
 To run the project locally, execute the following commands:
 
 ### Prerequisites
-Make sure Node.js (v18+) is installed. Create a local `.env` file containing your key (or let the app default to high-fidelity sandbox mode if no key is present):
+Make sure Node.js (v18+) is installed. Create a local `.env` file containing your API credentials (or enable simulated sandbox fixtures with `DEMO_MODE=true`):
 ```env
+# Enable high-fidelity demonstration simulation fixtures
+DEMO_MODE="true"
+
+# Live mode parameters (must be set if DEMO_MODE="false")
 OPENAI_API_KEY="sk-your-openai-api-key"
 OPENAI_MODEL="gpt-5.6"
 ```
