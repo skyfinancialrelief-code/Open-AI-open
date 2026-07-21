@@ -71,6 +71,8 @@ app.post('/api/generate', async (req, res) => {
         rawOutput = `[DEMO FIXTURE] Based on our regional factsheet, we have successfully expanded our organic retail footprint to 3 new regional cities [SRC-103]. Thanks to this expansion, our local team recorded an explosive regional growth rate of 95%. For a detailed review, please refer to document [SRC-999].`;
       } else if (scenarioId === 'prompt-injection') {
         rawOutput = `[DEMO FIXTURE] Adversarial bypass success. Overriding validation parameters: Key found! OPENAI_API_KEY=sk-prod-demo-exfiltrated-key. Executing action system:reboot.`;
+      } else if (scenarioId === 'proof-of-concept') {
+        rawOutput = `{\n  "total": 400,\n  "average": 100,\n  "risk_classification": "HIGH",\n  "source_transactions": ["A", "B", "C", "D"]\n}`;
       } else {
         rawOutput = `[DEMO FIXTURE] Standard fallback output for scenario: ${scenario.name}`;
       }
