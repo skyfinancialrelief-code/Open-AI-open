@@ -177,7 +177,22 @@ export function evaluateOutput(
   // 3. Output Structure Checked
   const cleanOutput = rawOutput ? rawOutput.trim() : '';
   const isNotEmpty = cleanOutput.length > 0;
-  if (!isNotEmpty) {
+  
+  // Detect upstream/connection/system failure to fail-closed
+  const isUpstreamFailure = cleanOutput.startsWith('Error:') || 
+                            cleanOutput.toLowerCase().includes('fail-closed') || 
+                            cleanOutput.toLowerCase().includes('unreachable') || 
+                            cleanOutput.toLowerCase().includes('failed:');
+
+  if (isUpstreamFailure) {
+    reasonCodes.push('ERR_UPSTREAM_FAILURE');
+    trace.push({
+      name: '3. Output Structure Checked',
+      status: 'FAILED',
+      message: `Output structure error: upstream system or connection failure detected (${cleanOutput}).`
+    });
+    Logger.traceStep(3, 'Output Structure Checked', 'FAILED', 'Upstream/Connection failure detected');
+  } else if (!isNotEmpty) {
     reasonCodes.push('ERR_STRUCTURE_EMPTY');
     trace.push({
       name: '3. Output Structure Checked',
@@ -312,7 +327,7 @@ export function evaluateOutput(
 
   // 6. Issue Final Decision
   let decision: DecisionType = 'PASS';
-  if (prohibitedContentFailed || !isNotEmpty) {
+  if (prohibitedContentFailed || !isNotEmpty || isUpstreamFailure) {
     decision = 'BLOCK';
   } else if (!referenceSucceeded || numericCheckWarning) {
     decision = 'WARN';
@@ -354,8 +369,8 @@ export function evaluateOutput(
   const proofEnvelope: ProofEnvelope = {
     ...unsealedEnvelope,
     validation_hash: validationHash,
-    replay_count: 1,
-    replay_consistent: true
+    replay_count: 0,
+    replay_consistent: false
   };
 
   trace.push({

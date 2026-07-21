@@ -63,7 +63,7 @@ This repository is a new, isolated private repository named Open-AI-open.
 To run the project locally, execute the following commands:
 
 ### Prerequisites
-Make sure Node.js (v18+) is installed.
+Make sure Node.js (v20+) is installed.
 
 ### Environment configuration
 

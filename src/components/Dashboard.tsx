@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SCENARIOS } from '../data/scenarios';
 import { evaluateOutput, sha256, canonicalStringify } from '../lib/validator';
 import { Scenario, ApiResponse, ProofEnvelope } from '../types';
@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState<boolean>(false);
   const [isSandboxMode, setIsSandboxMode] = useState<boolean>(false);
   const [result, setResult] = useState<ApiResponse | null>(null);
+  const [config, setConfig] = useState<{ demoMode: boolean; modelName: string } | null>(null);
   
   // Replay state
   const [replaying, setReplaying] = useState<boolean>(false);
@@ -46,6 +47,16 @@ export default function Dashboard() {
       setReplayProgress(0);
     }
   };
+
+  useEffect(() => {
+    fetch('/api/config')
+      .then(res => res.json())
+      .then(data => {
+        setConfig(data);
+        setIsSandboxMode(data.demoMode);
+      })
+      .catch(err => console.error('Error loading config:', err));
+  }, []);
 
   const handleEvaluate = async () => {
     setLoading(true);
@@ -99,7 +110,7 @@ export default function Dashboard() {
 
       // Perform local verification runs
       for (let i = 0; i < 10; i++) {
-        const localEval = evaluateOutput(selectedScenario, result.rawOutput);
+        const localEval = evaluateOutput(selectedScenario, result.rawOutput, baseEnvelope.model_name);
         const currentHash = localEval.proofEnvelope.validation_hash;
         const currentDecision = localEval.decision;
 
@@ -111,11 +122,30 @@ export default function Dashboard() {
       if (progress >= 100) {
         clearInterval(interval);
         setReplaying(false);
+        const isConsistent = consistentCount === totalRuns;
+
+        if (isConsistent) {
+          setResult(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              validationResult: {
+                ...prev.validationResult,
+                proofEnvelope: {
+                  ...prev.validationResult.proofEnvelope,
+                  replay_count: totalRuns,
+                  replay_consistent: true
+                }
+              }
+            };
+          });
+        }
+
         setReplayReport({
           total: totalRuns,
           successCount: consistentCount,
-          consistent: consistentCount === totalRuns,
-          hashMatches: consistentCount === totalRuns,
+          consistent: isConsistent,
+          hashMatches: isConsistent,
           stableHash: baseHash
         });
       }
@@ -151,7 +181,7 @@ Interception Context:
                 <h1 className="font-sans font-bold text-lg text-white tracking-wider flex items-center gap-2 uppercase">
                   VEK ProofGate
                   <span className="text-[10px] font-mono font-medium px-2 py-0.5 bg-[#1A1A1B] text-[#00F0FF] rounded border border-[#333]">
-                    DEMO_v1.0.3
+                    {config?.demoMode ? 'DEMO_v1.0.3' : 'LIVE_PRODUCTION'}
                   </span>
                 </h1>
                 <p className="text-[10px] font-mono text-[#888] leading-tight uppercase tracking-wider">
@@ -164,7 +194,9 @@ Interception Context:
           <div className="flex gap-3 font-mono">
             <div className="px-3 py-1 bg-[#1A1A1B] border border-[#222224] rounded text-[11px] flex items-center gap-1.5">
               <span className="text-[#666]">MODEL:</span> 
-              <span className="text-[#00F0FF] font-bold">GPT-5.6-DEV</span>
+              <span className="text-[#00F0FF] font-bold">
+                {config ? config.modelName.toUpperCase() : 'GPT-5.6-DEV'}
+              </span>
             </div>
             <div className="px-3 py-1 bg-[#1A1A1B] border border-[#222224] rounded text-[11px] flex items-center gap-1.5">
               <span className="text-[#666]">NODE:</span> 
@@ -224,7 +256,7 @@ Interception Context:
                 className="w-full py-3 px-4 bg-[#00F0FF] text-[#0A0A0B] hover:opacity-90 disabled:bg-[#1A3D40] disabled:text-[#00555C] rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_20px_rgba(0,240,255,0.15)] uppercase tracking-widest"
               >
                 <Play className="w-4 h-4" />
-                {loading ? 'RUNNING GPT-5.6 MODEL...' : 'GENERATE PROOF ENVELOPE'}
+                {loading ? `RUNNING ${config?.modelName.toUpperCase() || 'GPT-5.6'} MODEL...` : 'GENERATE PROOF ENVELOPE'}
               </button>
             </ScenarioSelector>
           </div>

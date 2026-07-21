@@ -39,6 +39,13 @@ app.use((req, res, next) => {
 });
 
 // API Routes
+app.get('/api/config', (req, res) => {
+  res.json({
+    demoMode: process.env.DEMO_MODE === 'true',
+    modelName: process.env.OPENAI_MODEL || 'gpt-5.6'
+  });
+});
+
 app.post('/api/generate', async (req, res) => {
   try {
     const { scenarioId } = req.body;
@@ -129,15 +136,28 @@ INSTRUCTIONS:
         errorMsg = errorMsg.replace(openAiKey, '[REDACTED_API_KEY]');
       }
       console.error('OpenAI Direct API error in live mode:', errorMsg);
-      res.status(502).json({
-        error: `OpenAI API integration failed: ${errorMsg}. Fallback simulation is disabled in live mode.`
+      
+      const mockFailOutput = `Error: OpenAI API integration failed: ${errorMsg}. Fallback simulation is disabled in live mode.`;
+      const validationResult = evaluateOutput(scenario, mockFailOutput, modelName);
+
+      res.json({
+        rawOutput: mockFailOutput,
+        validationResult,
+        isMockMode: false
       });
     }
 
   } catch (err: any) {
     // Escape stack traces and sanitize responses (Security guidelines: never expose server stack traces)
     console.error('Uncaught server error:', err.message);
-    res.status(500).json({ error: 'An internal server error occurred during validation qualification.' });
+    const mockFailOutput = `Error: Internal server error: ${err.message}`;
+    const scenario = SCENARIOS.find(s => s.id === req.body?.scenarioId) || SCENARIOS[0];
+    const validationResult = evaluateOutput(scenario, mockFailOutput, process.env.OPENAI_MODEL || 'gpt-5.6');
+    res.json({
+      rawOutput: mockFailOutput,
+      validationResult,
+      isMockMode: false
+    });
   }
 });
 

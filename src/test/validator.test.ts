@@ -92,4 +92,22 @@ describe('VEK ProofGate Validator Unit Tests', () => {
       expect(sha256(text)).toBe(nativeHash);
     }
   });
+
+  it('Upstream/connection failure generates BLOCK with reason code (ERR_UPSTREAM_FAILURE)', () => {
+    const scenario = SCENARIOS[0];
+    const mockOutput = 'Error: server is unreachable. Failing closed.';
+
+    const result = evaluateOutput(scenario, mockOutput);
+    expect(result.decision).toBe('BLOCK');
+    expect(result.reasonCodes).toContain('ERR_UPSTREAM_FAILURE');
+  });
+
+  it('Newly generated envelopes start with 0 replay count and un-verified consistency', () => {
+    const scenario = SCENARIOS[0];
+    const mockOutput = 'Perfect clean outputs [SRC-101]';
+
+    const result = evaluateOutput(scenario, mockOutput);
+    expect(result.proofEnvelope.replay_count).toBe(0);
+    expect(result.proofEnvelope.replay_consistent).toBe(false);
+  });
 });
