@@ -1,6 +1,6 @@
 {
-  "name": "VEK ProofGate",
-  "description": "Deterministic qualification and replayable proof for AI-generated outputs.",
-  "requestFramePermissions": [],
-  "majorCapabilities": []
+  "name": "Gust AI Console",
+  "description": "Gust: Deterministic technology AI console built by Thoeun Thien, powered by the VEK Proof Engine.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

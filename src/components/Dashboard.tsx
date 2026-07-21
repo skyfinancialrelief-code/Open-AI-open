@@ -20,7 +20,9 @@ import {
   Flame,
   FileText,
   Terminal,
-  Layers
+  Layers,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -34,6 +36,7 @@ export default function Dashboard() {
   // Replay state
   const [replaying, setReplaying] = useState<boolean>(false);
   const [replayProgress, setReplayProgress] = useState<number>(0);
+  const [speakingScenarioAudio, setSpeakingScenarioAudio] = useState<boolean>(false);
   const [replayReport, setReplayReport] = useState<{
     total: number;
     successCount: number;
@@ -41,6 +44,35 @@ export default function Dashboard() {
     hashMatches: boolean;
     stableHash: string;
   } | null>(null);
+
+  const speakScenarioText = (text: string) => {
+    if (!('speechSynthesis' in window)) {
+      alert('Text-to-speech audio synthesis is not supported in this browser.');
+      return;
+    }
+
+    if (speakingScenarioAudio) {
+      window.speechSynthesis.cancel();
+      setSpeakingScenarioAudio(false);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const cleanText = text
+      .replace(/\[DEMO FIXTURE\]/g, '')
+      .replace(/\[SRC-\d+\]/g, '')
+      .trim();
+
+    const utterance = new SpeechSynthesisUtterance(cleanText || text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    utterance.onend = () => setSpeakingScenarioAudio(false);
+    utterance.onerror = () => setSpeakingScenarioAudio(false);
+
+    setSpeakingScenarioAudio(true);
+    window.speechSynthesis.speak(utterance);
+  };
 
   const handleScenarioChange = (scenarioId: string) => {
     const scenario = SCENARIOS.find(s => s.id === scenarioId);
@@ -183,13 +215,13 @@ Interception Context:
               </div>
               <div>
                 <h1 className="font-sans font-bold text-lg text-white tracking-wider flex items-center gap-2 uppercase">
-                  VEK ProofGate
+                  Gust AI Console
                   <span className="text-[10px] font-mono font-medium px-2 py-0.5 bg-[#1A1A1B] text-[#00F0FF] rounded border border-[#333]">
                     {config?.demoMode ? 'DEMO_v1.0.3' : 'LIVE_PRODUCTION'}
                   </span>
                 </h1>
                 <p className="text-[10px] font-mono text-[#888] leading-tight uppercase tracking-wider">
-                  GUTS DETERMINISTIC TECHNOLOGY LLC // AUTHOR: THOEUN THIEN
+                  GUST DETERMINISTIC TECHNOLOGY // CREATED BY THOEUN THIEN
                 </p>
               </div>
             </div>
@@ -215,7 +247,7 @@ Interception Context:
         <div className="max-w-7xl mx-auto flex items-start gap-2">
           <span className="font-bold shrink-0 text-amber-500 uppercase not-italic">[SYSTEM NOTICE]:</span>
           <span>
-            “VEK ProofGate does not make the language model deterministic and does not independently prove factual truth. It deterministically evaluates a fixed model output against a disclosed set of demonstration policies. The same input, output, policy, and validator version must produce the same qualification result and validation hash.”
+            “Gust is a deterministic technology AI console engineered by Thoeun Thien. Powered by the VEK Proof Engine, Gust evaluates model outputs against explicit rules and ground-truth evidence, producing deterministic qualification decisions and cryptographic proof envelopes.”
           </span>
         </div>
       </div>
@@ -326,10 +358,23 @@ Interception Context:
                   {/* Left Side: Raw GPT Response */}
                   <div className="bg-[#0F0F10] border border-[#222224] rounded-xl overflow-hidden flex flex-col shadow-lg">
                     <div className="bg-[#121214] border-b border-[#222224] px-6 py-3 flex items-center justify-between">
-                      <h3 className="font-mono font-bold text-[#888] text-xs uppercase tracking-widest">
+                      <h3 className="font-mono font-bold text-[#888] text-xs uppercase tracking-widest flex items-center gap-2">
                         Raw {config ? config.modelName.toUpperCase() : 'GPT-5.6'} Output
                       </h3>
-                      <span className="text-[10px] text-[#555] font-mono uppercase">STREAMS_OK_v1.2</span>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => speakScenarioText(result.rawOutput)}
+                          className={`px-2.5 py-1 rounded text-[10px] font-mono border flex items-center gap-1.5 transition-all cursor-pointer ${
+                            speakingScenarioAudio
+                              ? 'bg-[#00FF41]/20 border-[#00FF41] text-[#00FF41] animate-pulse'
+                              : 'bg-[#1A1A1B] border-[#333] hover:border-[#00F0FF] text-[#00F0FF]'
+                          }`}
+                        >
+                          {speakingScenarioAudio ? <VolumeX className="w-3 h-3 text-[#00FF41]" /> : <Volume2 className="w-3 h-3 text-[#00F0FF]" />}
+                          <span>{speakingScenarioAudio ? 'Stop Audio' : 'Audio Response'}</span>
+                        </button>
+                        <span className="text-[10px] text-[#555] font-mono uppercase">STREAMS_OK_v1.2</span>
+                      </div>
                     </div>
                     
                     <div className="p-6 flex-1 flex flex-col justify-between space-y-4">

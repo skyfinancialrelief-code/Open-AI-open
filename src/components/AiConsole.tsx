@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Terminal, 
   Send, 
@@ -17,7 +17,13 @@ import {
   ChevronDown,
   ChevronUp,
   Flame,
-  Key
+  Key,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Volume1,
+  Radio
 } from 'lucide-react';
 import { Scenario, EvidenceSource, ApiResponse, ProofEnvelope } from '../types';
 import { evaluateOutput, sha256 } from '../lib/validator';
@@ -89,6 +95,102 @@ export default function AiConsole({ modelName, demoMode }: AiConsoleProps) {
   // Replay status map per message
   const [replayingMsgId, setReplayingMsgId] = useState<string | null>(null);
   const [replayProgress, setReplayProgress] = useState<number>(0);
+
+  // Voice Input (Microphone) State
+  const [isListening, setIsListening] = useState<boolean>(false);
+  const [micStatusText, setMicStatusText] = useState<string>('');
+  const recognitionRef = useRef<any>(null);
+
+  // Audio Response (Speech Synthesis) State
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const [autoReadAudio, setAutoReadAudio] = useState<boolean>(false);
+
+  const toggleListening = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech Recognition is not supported in this browser environment. Please enter text manually.");
+      return;
+    }
+
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      setMicStatusText('');
+    } else {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => {
+          setIsListening(true);
+          setMicStatusText('Listening... Speak into microphone');
+        };
+
+        recognition.onresult = (event: any) => {
+          let transcript = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          if (transcript.trim()) {
+            setPrompt(prev => prev ? `${prev} ${transcript}` : transcript);
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn('Speech recognition error:', event.error);
+          setIsListening(false);
+          setMicStatusText(event.error === 'not-allowed' ? 'Microphone access denied.' : `Microphone: ${event.error}`);
+          setTimeout(() => setMicStatusText(''), 3000);
+        };
+
+        recognition.onend = () => {
+          setIsListening(false);
+          setMicStatusText('');
+        };
+
+        recognition.start();
+        recognitionRef.current = recognition;
+      } catch (err) {
+        console.error(err);
+        setIsListening(false);
+        setMicStatusText('Failed to start microphone.');
+      }
+    }
+  };
+
+  const speakText = (msgId: string, text: string) => {
+    if (!('speechSynthesis' in window)) {
+      alert('Text-to-speech audio synthesis is not supported in this browser.');
+      return;
+    }
+
+    if (speakingMsgId === msgId) {
+      window.speechSynthesis.cancel();
+      setSpeakingMsgId(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const cleanText = text
+      .replace(/\[DEMO FIXTURE\]/g, '')
+      .replace(/\[SRC-\d+\]/g, '')
+      .replace(/\[GPT-5\.6 Console Output\]/g, '')
+      .trim();
+
+    const utterance = new SpeechSynthesisUtterance(cleanText || text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    utterance.onend = () => setSpeakingMsgId(null);
+    utterance.onerror = () => setSpeakingMsgId(null);
+
+    setSpeakingMsgId(msgId);
+    window.speechSynthesis.speak(utterance);
+  };
 
   const handleAddEvidence = (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,6 +267,10 @@ export default function AiConsole({ modelName, demoMode }: AiConsoleProps) {
       };
 
       setMessages(prev => [...prev, asstMsg]);
+
+      if (autoReadAudio && responseData.rawOutput) {
+        setTimeout(() => speakText(assistantMsgId, responseData.rawOutput), 100);
+      }
     } catch (err) {
       // Local fallback calculation if connection drops
       const failText = 'Error: Service unreachable. Fail-closed gateway triggered.';
@@ -258,18 +364,31 @@ export default function AiConsole({ modelName, demoMode }: AiConsoleProps) {
           </div>
           <div>
             <h2 className="font-mono font-bold text-white text-sm uppercase tracking-wider flex items-center gap-2">
-              ChatGPT {modelName.toUpperCase()} Execution Console
+              Gust AI Console // ChatGPT {modelName.toUpperCase()}
               <span className="text-[10px] font-mono px-2 py-0.5 bg-[#00F0FF]/10 text-[#00F0FF] rounded border border-[#00F0FF]/30">
-                PROOFGATE_CONNECTED
+                GUST_DETERMINISTIC_ENGINE
               </span>
             </h2>
             <p className="text-[10px] font-mono text-[#888] uppercase tracking-widest">
-              Live Interactive Prompt Sandbox // Deterministic 7-Step Qualification
+              Engineered by Thoeun Thien // VEK Proof Engine Live Interactive Sandbox
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setAutoReadAudio(!autoReadAudio)}
+            className={`px-3 py-1.5 text-xs font-mono rounded border flex items-center gap-1.5 transition-all cursor-pointer ${
+              autoReadAudio 
+                ? 'bg-[#00F0FF]/15 border-[#00F0FF] text-[#00F0FF] shadow-[0_0_10px_rgba(0,240,255,0.2)]'
+                : 'bg-[#1A1A1B] border-[#333] text-[#888] hover:text-white'
+            }`}
+            title="Auto-read aloud generated responses upon arrival"
+          >
+            {autoReadAudio ? <Volume2 className="w-3.5 h-3.5 text-[#00F0FF]" /> : <VolumeX className="w-3.5 h-3.5 text-[#888]" />}
+            <span>Auto Audio: {autoReadAudio ? 'ON' : 'OFF'}</span>
+          </button>
+
           <button
             onClick={() => setShowEvidenceManager(!showEvidenceManager)}
             className="px-3 py-1.5 bg-[#1A1A1B] hover:border-[#00F0FF] text-xs font-mono text-[#BBB] hover:text-white rounded border border-[#333] flex items-center gap-1.5 transition-all cursor-pointer"
@@ -480,9 +599,28 @@ export default function AiConsole({ modelName, demoMode }: AiConsoleProps) {
                           {msg.result.rawOutput}
                         </div>
 
-                        {/* Action Buttons: Trace, Envelope, Replay */}
+                        {/* Action Buttons: Trace, Envelope, Replay, Audio */}
                         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#222224] pt-4 font-mono text-xs">
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              onClick={() => speakText(msg.id, msg.result ? msg.result.rawOutput : msg.content)}
+                              className={`px-3 py-1.5 rounded border flex items-center gap-1.5 transition-all cursor-pointer font-mono text-xs ${
+                                speakingMsgId === msg.id
+                                  ? 'bg-[#00FF41]/20 border-[#00FF41] text-[#00FF41] animate-pulse shadow-[0_0_10px_rgba(0,255,65,0.3)]'
+                                  : 'bg-[#1A1A1B] hover:border-[#00F0FF] text-[#BBB] hover:text-white border-[#333]'
+                              }`}
+                            >
+                              {speakingMsgId === msg.id ? (
+                                <>
+                                  <VolumeX className="w-3.5 h-3.5 text-[#00FF41]" /> Stop Audio
+                                </>
+                              ) : (
+                                <>
+                                  <Volume2 className="w-3.5 h-3.5 text-[#00F0FF]" /> Audio Response
+                                </>
+                              )}
+                            </button>
+
                             <button
                               onClick={() => setExpandedTraceMsgId(expandedTraceMsgId === msg.id ? null : msg.id)}
                               className="px-3 py-1.5 bg-[#1A1A1B] hover:border-[#00F0FF] text-[#BBB] hover:text-white rounded border border-[#333] flex items-center gap-1.5 transition-all cursor-pointer"
@@ -562,6 +700,18 @@ export default function AiConsole({ modelName, demoMode }: AiConsoleProps) {
         )}
       </div>
 
+      {/* Listening Status Indicator Banner */}
+      {micStatusText && (
+        <div className={`px-4 py-2 text-xs font-mono flex items-center gap-2 border-t ${
+          isListening 
+            ? 'bg-[#FF3E00]/10 border-[#FF3E00]/30 text-[#FF3E00]' 
+            : 'bg-[#1A1A1B] border-[#333] text-[#00F0FF]'
+        }`}>
+          <Radio className="w-3.5 h-3.5 animate-pulse shrink-0" />
+          <span>{micStatusText}</span>
+        </div>
+      )}
+
       {/* Input Form Footer */}
       <div className="bg-[#121214] border-t border-[#222224] p-4 sm:p-5">
         <form
@@ -583,13 +733,30 @@ export default function AiConsole({ modelName, demoMode }: AiConsoleProps) {
                   handleSendPrompt();
                 }
               }}
-              placeholder={`Enter prompt or question for ChatGPT ${modelName.toUpperCase()} (e.g. "Summarize financial numbers and cite sources")...`}
-              className="w-full bg-[#0A0A0B] border border-[#333] focus:border-[#00F0FF] rounded-lg p-3 text-xs font-mono text-white outline-none resize-none placeholder-[#555] transition-colors"
+              placeholder={`Enter or speak prompt for ChatGPT ${modelName.toUpperCase()} (e.g. "Summarize financial numbers and cite sources")...`}
+              className="w-full bg-[#0A0A0B] border border-[#333] focus:border-[#00F0FF] rounded-lg p-3 text-xs font-mono text-white outline-none resize-none placeholder-[#555] transition-colors pr-24"
             />
             <div className="absolute right-3 bottom-3 text-[10px] font-mono text-[#555]">
               Shift+Enter for newline
             </div>
           </div>
+
+          <button
+            type="button"
+            id="mic-input-btn"
+            onClick={toggleListening}
+            className={`py-3 px-4 rounded-lg border font-mono text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer h-[52px] shrink-0 ${
+              isListening
+                ? 'bg-[#FF3E00]/20 border-[#FF3E00] text-[#FF3E00] animate-pulse shadow-[0_0_15px_rgba(255,62,0,0.3)]'
+                : 'bg-[#1A1A1B] border-[#333] hover:border-[#00F0FF] text-[#BBB] hover:text-white'
+            }`}
+            title={isListening ? "Stop voice listening" : "Click to speak into microphone"}
+          >
+            {isListening ? <MicOff className="w-4 h-4 text-[#FF3E00]" /> : <Mic className="w-4 h-4 text-[#00F0FF]" />}
+            <span className="hidden sm:inline uppercase text-[10px]">
+              {isListening ? 'Listening' : 'Mic'}
+            </span>
+          </button>
 
           <button
             type="submit"
