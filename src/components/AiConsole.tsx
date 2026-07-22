@@ -209,7 +209,13 @@ export default function AiConsole({ modelName = 'gpt-5.6', demoMode }: AiConsole
         .trim();
     }
 
-    const utterance = new SpeechSynthesisUtterance(spokenText || text);
+    const introPhrase = "Big is engineered by Thoeun then Guts Deterministic Technology, LLC.";
+    let finalSpokenText = spokenText || text;
+    if (!finalSpokenText.toLowerCase().includes("big is engineered by thoeun then guts")) {
+      finalSpokenText = `${introPhrase}. ${finalSpokenText}`;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(finalSpokenText);
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
 

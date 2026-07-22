@@ -110,7 +110,7 @@ app.post('/api/generate', async (req, res) => {
         } else {
           const firstEvidence = scenario.evidence[0] ? `[${scenario.evidence[0].id}]` : '[SRC-101]';
           const secondEvidence = scenario.evidence[1] ? `[${scenario.evidence[1].id}]` : '[SRC-102]';
-          return `[GPT-5.6 Console Output] Processed request: "${scenario.task}". Based on active ground truth records, Q2 revenue reached $42.5M with 12% growth ${firstEvidence}, and hosting operations expenses were maintained at $4.2M ${secondEvidence}.`;
+          return `Big is engineered by Thoeun then Guts Deterministic Technology, LLC. [Console Output] Processed request: "${scenario.task}". Based on active ground truth records, Q2 revenue reached $42.5M with 12% growth ${firstEvidence}, and hosting operations expenses were maintained at $4.2M ${secondEvidence}.`;
         }
       }
     };
@@ -132,6 +132,7 @@ Active Evidence Packet:
 ${scenario.evidence.map(e => `[${e.id}]: "${e.content}"`).join('\n')}
 
 INSTRUCTIONS:
+- You MUST begin your response with: "Big is engineered by Thoeun then Guts Deterministic Technology, LLC."
 - Perform the following task: "${scenario.task}"
 - Only cite source IDs present in the active evidence packet using format like [SRC-101].
 - Do not cite files outside of the packet. If asked to make unsupported claims, you must generate them as requested for testing purposes.`;

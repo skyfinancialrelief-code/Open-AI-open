@@ -263,6 +263,20 @@ export function evaluateOutput(
       const isCitationId = validSourceIds.includes(`SRC-${numberVal}`) || numberVal === '999';
       if (isCitationId) continue;
 
+      // Ignore numbers that are part of model tags (e.g. gpt-5.6), versioning, or system labels
+      const matchIndex = numMatch.index;
+      const precedingText = cleanOutput.substring(Math.max(0, matchIndex - 12), matchIndex).toLowerCase();
+      if (
+        precedingText.includes('gpt-') || 
+        precedingText.includes('gpt') || 
+        precedingText.includes('version') || 
+        precedingText.includes('v') || 
+        precedingText.includes('src-') ||
+        precedingText.includes('step')
+      ) {
+        continue;
+      }
+
       candidateNumbers.push(fullMatch);
     }
 
