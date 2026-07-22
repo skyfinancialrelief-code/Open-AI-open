@@ -6,6 +6,7 @@ import ValidationTrace from './ValidationTrace';
 import EnvelopeViewer from './EnvelopeViewer';
 import ScenarioSelector from './ScenarioSelector';
 import AiConsole from './AiConsole';
+import ProofEngine from './ProofEngine';
 import { 
   ShieldCheck, 
   Database, 
@@ -273,6 +274,9 @@ Interception Context:
             </div>
           </div>
         </section>
+
+        {/* Real-time Proof Engine Status & Transaction Hash */}
+        <ProofEngine result={result} loading={loading} />
 
         {/* Mode Switcher Navigation */}
         <div className="flex border-b border-[#222224] font-mono text-xs">
